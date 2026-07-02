@@ -3,7 +3,12 @@
 import json
 from typing import Any
 
-from app.llm import complete_json
+from app.llm import (
+    complete_json,
+    get_llm_config,
+    get_model_name,
+    get_safe_max_tokens,
+)
 from app.prompts import INTERVIEW_PREP_PROMPT, get_language_name
 from app.schemas import InterviewPrepData
 
@@ -107,6 +112,8 @@ async def generate_interview_prep(
         resume_data=_serialize_resume_data_for_prompt(resume_data),
         output_language=get_language_name(language),
     )
+    config = get_llm_config()
+    max_tokens = get_safe_max_tokens(get_model_name(config), requested=8192)
 
     result = await complete_json(
         prompt=prompt,
@@ -114,7 +121,7 @@ async def generate_interview_prep(
             "You are a career interview coach. Output truthful, resume-grounded "
             "interview preparation as JSON only."
         ),
-        max_tokens=8192,
+        max_tokens=max_tokens,
         schema_type="interview_prep",
     )
 

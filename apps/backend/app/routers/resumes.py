@@ -530,7 +530,7 @@ async def _generate_auxiliary_messages(
     title = None
     interview_prep = None
     warnings: list[str] = []
-    generation_tasks: list[Awaitable[Any]] = []
+    generation_tasks: list[Awaitable[str | InterviewPrepData]] = []
     task_labels: list[str] = []
 
     # Title generation is always on (no feature flag)
@@ -1901,7 +1901,7 @@ async def generate_interview_prep_endpoint(
             language,
         )
     except Exception as e:
-        logger.error("Interview preparation generation failed: %s", e)
+        logger.exception("Interview preparation generation failed: %s", e)
         raise HTTPException(
             status_code=500,
             detail="Failed to generate interview preparation. Please try again.",

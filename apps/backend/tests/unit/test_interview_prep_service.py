@@ -43,14 +43,25 @@ async def test_generate_interview_prep_validates_successful_json():
     with patch(
         "app.services.interview_prep.complete_json",
         new_callable=AsyncMock,
-    ) as mock_complete:
+    ) as mock_complete, patch(
+        "app.services.interview_prep.get_model_name",
+        return_value="openai/small-output-model",
+    ) as mock_get_model_name, patch(
+        "app.services.interview_prep.get_safe_max_tokens",
+        return_value=4096,
+    ) as mock_get_safe_max_tokens:
         mock_complete.return_value = _valid_payload()
 
         result = await generate_interview_prep(SAMPLE_RESUME, "Need FastAPI", "en")
 
     assert result.role_fit_analysis == ["Python API experience is relevant."]
     mock_complete.assert_awaited_once()
-    assert mock_complete.await_args.kwargs["max_tokens"] == 8192
+    mock_get_model_name.assert_called_once()
+    mock_get_safe_max_tokens.assert_called_once_with(
+        "openai/small-output-model",
+        requested=8192,
+    )
+    assert mock_complete.await_args.kwargs["max_tokens"] == 4096
     assert mock_complete.await_args.kwargs["schema_type"] == "interview_prep"
 
 
