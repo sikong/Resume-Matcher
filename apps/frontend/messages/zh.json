@@ -957,6 +957,13 @@
     "title": "申请追踪",
     "subtitle": "追踪每份定制简历在求职流程中的进展。",
     "addApplication": "添加申请",
+    "manage": {
+      "button": "管理",
+      "title": "管理状态模块",
+      "visible": "显示",
+      "hidden": "隐藏",
+      "lastVisible": "至少保留一项"
+    },
     "columns": {
       "saved": "已保存",
       "applied": "已投递",

@@ -948,6 +948,13 @@
     "title": "Suivi des candidatures",
     "subtitle": "Suivez l'avancement de chaque CV personnalisé dans votre pipeline.",
     "addApplication": "Ajouter une candidature",
+    "manage": {
+      "button": "Gérer",
+      "title": "Gérer les étapes",
+      "visible": "Visible",
+      "hidden": "Masquée",
+      "lastVisible": "Obligatoire"
+    },
     "columns": {
       "saved": "Enregistré",
       "applied": "Postulé",
