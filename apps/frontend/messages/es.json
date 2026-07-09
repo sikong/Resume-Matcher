@@ -957,6 +957,13 @@
     "title": "Seguimiento de candidaturas",
     "subtitle": "Controla en qué punto está cada currículum adaptado de tu proceso.",
     "addApplication": "Añadir candidatura",
+    "manage": {
+      "button": "Gestionar",
+      "title": "Gestionar etapas",
+      "visible": "Visible",
+      "hidden": "Oculta",
+      "lastVisible": "Obligatoria"
+    },
     "columns": {
       "saved": "Guardado",
       "applied": "Enviado",

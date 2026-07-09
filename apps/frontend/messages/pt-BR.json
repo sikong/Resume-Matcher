@@ -957,6 +957,13 @@
     "title": "Acompanhamento de candidaturas",
     "subtitle": "Acompanhe em que etapa está cada currículo personalizado.",
     "addApplication": "Adicionar candidatura",
+    "manage": {
+      "button": "Gerenciar",
+      "title": "Gerenciar etapas",
+      "visible": "Visível",
+      "hidden": "Oculta",
+      "lastVisible": "Obrigatória"
+    },
     "columns": {
       "saved": "Salvo",
       "applied": "Enviado",

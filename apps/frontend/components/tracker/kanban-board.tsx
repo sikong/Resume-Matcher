@@ -15,6 +15,7 @@ import Plus from 'lucide-react/dist/esm/icons/plus';
 import Loader2 from 'lucide-react/dist/esm/icons/loader-2';
 import ChevronLeft from 'lucide-react/dist/esm/icons/chevron-left';
 import ChevronRight from 'lucide-react/dist/esm/icons/chevron-right';
+import Settings2 from 'lucide-react/dist/esm/icons/settings-2';
 import { Button } from '@/components/ui/button';
 import { useTranslations } from '@/lib/i18n';
 import {
@@ -31,13 +32,49 @@ import { KanbanColumn } from './kanban-column';
 import { BulkActionBar } from './bulk-action-bar';
 import { CardDetailModal } from './card-detail-modal';
 import { ManualAddApplicationDialog } from './manual-add-application-dialog';
+import { StatusVisibilityDialog } from './status-visibility-dialog';
 import { planMove } from './reorder';
+
+const TRACKER_HIDDEN_STATUSES_STORAGE_KEY = 'resume_matcher_tracker_hidden_statuses';
 
 function emptyColumns(): ApplicationColumns {
   return APPLICATION_STATUS_ORDER.reduce((acc, status) => {
     acc[status] = [];
     return acc;
   }, {} as ApplicationColumns);
+}
+
+function isApplicationStatus(value: unknown): value is ApplicationStatus {
+  return typeof value === 'string' && APPLICATION_STATUS_ORDER.includes(value as ApplicationStatus);
+}
+
+function readHiddenStatusesFromStorage(): Set<ApplicationStatus> {
+  if (typeof window === 'undefined') return new Set();
+
+  try {
+    const raw = window.localStorage.getItem(TRACKER_HIDDEN_STATUSES_STORAGE_KEY);
+    if (!raw) return new Set();
+
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return new Set();
+
+    const statuses = new Set(parsed.filter(isApplicationStatus));
+    // Never restore a blank board from stale/corrupt storage.
+    if (statuses.size >= APPLICATION_STATUS_ORDER.length) return new Set();
+
+    return statuses;
+  } catch {
+    return new Set();
+  }
+}
+
+function writeHiddenStatusesToStorage(hiddenStatuses: Set<ApplicationStatus>) {
+  if (typeof window === 'undefined') return;
+
+  window.localStorage.setItem(
+    TRACKER_HIDDEN_STATUSES_STORAGE_KEY,
+    JSON.stringify([...hiddenStatuses])
+  );
 }
 
 export function KanbanBoard() {
@@ -53,6 +90,9 @@ export function KanbanBoard() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [openCardId, setOpenCardId] = useState<string | null>(null);
   const [manualAddOpen, setManualAddOpen] = useState(false);
+  const [visibilityDialogOpen, setVisibilityDialogOpen] = useState(false);
+  const [hiddenStatuses, setHiddenStatuses] = useState<Set<ApplicationStatus>>(new Set());
+  const [visibilityLoaded, setVisibilityLoaded] = useState(false);
 
   // Horizontal-scroll affordance: the seven stages overflow the canvas, so we
   // track whether more columns sit off-screen and surface controls + a stage
@@ -78,6 +118,21 @@ export function KanbanBoard() {
     void load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    setHiddenStatuses(readHiddenStatusesFromStorage());
+    setVisibilityLoaded(true);
+  }, []);
+
+  useEffect(() => {
+    if (!visibilityLoaded) return;
+    writeHiddenStatusesToStorage(hiddenStatuses);
+  }, [hiddenStatuses, visibilityLoaded]);
+
+  const visibleStatuses = useMemo(
+    () => APPLICATION_STATUS_ORDER.filter((status) => !hiddenStatuses.has(status)),
+    [hiddenStatuses]
+  );
 
   const allCards: Application[] = useMemo(
     () => APPLICATION_STATUS_ORDER.flatMap((status) => columns[status]),
@@ -113,7 +168,7 @@ export function KanbanBoard() {
       el.removeEventListener('scroll', sync);
       window.removeEventListener('resize', sync);
     };
-  }, [loading, isEmpty]);
+  }, [loading, isEmpty, visibleStatuses.length]);
 
   const scrollByColumn = (direction: 1 | -1) => {
     scrollRef.current?.scrollBy({ left: direction * 320, behavior: 'smooth' });
@@ -156,6 +211,26 @@ export function KanbanBoard() {
   };
 
   const clearSelection = () => setSelectedIds(new Set());
+
+  const handleStatusVisibilityChange = (status: ApplicationStatus, visible: boolean) => {
+    const currentlyVisible = !hiddenStatuses.has(status);
+    if (!visible && currentlyVisible && visibleStatuses.length <= 1) return;
+
+    setHiddenStatuses((prev) => {
+      const next = new Set(prev);
+      if (visible) next.delete(status);
+      else next.add(status);
+      return next;
+    });
+
+    if (!visible) {
+      const hiddenIds = new Set(columns[status].map((application) => application.application_id));
+      setSelectedIds((prev) => {
+        const next = new Set([...prev].filter((id) => !hiddenIds.has(id)));
+        return next.size === prev.size ? prev : next;
+      });
+    }
+  };
 
   const handleBulkMove = async (status: ApplicationStatus) => {
     const ids = [...selectedIds];
@@ -218,6 +293,10 @@ export function KanbanBoard() {
               </button>
             </div>
           )}
+          <Button variant="outline" onClick={() => setVisibilityDialogOpen(true)}>
+            <Settings2 className="h-4 w-4" />
+            {t('tracker.manage.button')}
+          </Button>
           <Button onClick={() => setManualAddOpen(true)}>
             <Plus className="h-4 w-4" />
             {t('tracker.addApplication')}
@@ -261,12 +340,12 @@ export function KanbanBoard() {
             onDragEnd={handleDragEnd}
           >
             <div ref={scrollRef} className="flex min-h-0 flex-1 overflow-x-auto">
-              {APPLICATION_STATUS_ORDER.map((status, index) => (
+              {visibleStatuses.map((status, index) => (
                 <div
                   key={status}
                   data-column={status}
                   className={`flex ${
-                    index < APPLICATION_STATUS_ORDER.length - 1 ? 'border-r border-black' : ''
+                    index < visibleStatuses.length - 1 ? 'border-r border-black' : ''
                   }`}
                 >
                   <KanbanColumn
@@ -295,7 +374,7 @@ export function KanbanBoard() {
             </span>
           )}
           <div className="flex items-center gap-2">
-            {APPLICATION_STATUS_ORDER.map((status) => (
+            {visibleStatuses.map((status) => (
               <button
                 key={status}
                 type="button"
@@ -309,6 +388,13 @@ export function KanbanBoard() {
           </div>
         </div>
       )}
+
+      <StatusVisibilityDialog
+        open={visibilityDialogOpen}
+        onOpenChange={setVisibilityDialogOpen}
+        hiddenStatuses={hiddenStatuses}
+        onStatusVisibilityChange={handleStatusVisibilityChange}
+      />
 
       <CardDetailModal
         applicationId={openCardId}
